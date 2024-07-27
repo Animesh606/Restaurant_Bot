@@ -12,6 +12,7 @@ import { MenuDialog } from "../dialogs/menuDialog";
 import { OrderDialog } from "../dialogs/orderDialog";
 import { ReservationDialog } from "../dialogs/reservationDialog";
 import { RootDialog } from "../dialogs/rootDialog";
+import { RestaurantDialog } from "../dialogs/restaurantDialog";
 
 const DIALOG_STATE_PROPERTY = "dialogState";
 
@@ -24,10 +25,18 @@ export class RestaurantBot extends ActivityHandler {
     constructor(conversationState, userState) {
         super();
 
-        if (!conversationState) throw new Error('[RestaurantBot]: Missing parameter. conversationState is required');
-        if (!userState) throw new Error('[RestaurantBot]: Missing parameter. userState is required');
+        if (!conversationState)
+            throw new Error(
+                "[RestaurantBot]: Missing parameter. conversationState is required"
+            );
+        if (!userState)
+            throw new Error(
+                "[RestaurantBot]: Missing parameter. userState is required"
+            );
 
-        this.dialogState = conversationState.createProperty(DIALOG_STATE_PROPERTY);
+        this.dialogState = conversationState.createProperty(
+            DIALOG_STATE_PROPERTY
+        );
         this.dialogs = new DialogSet(this.dialogState);
         this.conversationState = conversationState;
         this.userState = userState;
@@ -35,13 +44,27 @@ export class RestaurantBot extends ActivityHandler {
         this.dialogs.add(new MenuDialog());
         this.dialogs.add(new OrderDialog());
         this.dialogs.add(new ReservationDialog());
+        this.dialogs.add(new RestaurantDialog());
 
         this.onMessage(async (context, next) => {
+            console.log("context", context.activity.value);
             const dialogContext = await this.dialogs.createContext(context);
             const result = await dialogContext.continueDialog();
-            console.log(result);
-            console.log(DialogTurnStatus);
-            if (result.status === DialogTurnStatus.empty) {
+
+            if (context.activity.value) {
+                switch (context.activity.value.title) {
+                    case "Visit Menu":
+                        await dialogContext.beginDialog("menuDialog", {
+                            restaurantId: context.activity.value.restaurantId,
+                        });
+                        break;
+                    case "Book Reservation":
+                        await dialogContext.beginDialog("reservationDialog", {
+                            restaurantId: context.activity.value.restaurantId,
+                        });
+                        break;
+                }
+            } else if (result.status === DialogTurnStatus.empty) {
                 await dialogContext.beginDialog("rootDialog");
             }
 
@@ -56,11 +79,10 @@ export class RestaurantBot extends ActivityHandler {
             );
             await next();
         });
-
     }
     async run(context: TurnContext) {
         await super.run(context);
-    
+
         await this.conversationState.saveChanges(context, false);
         await this.userState.saveChanges(context, false);
     }

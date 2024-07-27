@@ -7,6 +7,8 @@ import {
 } from "botbuilder-dialogs";
 import axios from "axios";
 import apiConfig from "../api.config";
+import { MessageFactory } from "botbuilder";
+import createRestaurantCard from "../cards/restaurantCard";
 
 const RESTAURANT_DIALOG = "restaurantDialog";
 const WATERFALL_DIALOG = "waterfallDialog";
@@ -16,9 +18,9 @@ export class RestaurantDialog extends ComponentDialog {
     constructor() {
         super(RESTAURANT_DIALOG);
 
-        this.addDialog(new TextPrompt(TEXT_PROMPT))
-            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
-                this.promptForSearchCriteria.bind(this),
+        this.addDialog(new TextPrompt(TEXT_PROMPT)).addDialog(
+            new WaterfallDialog(WATERFALL_DIALOG, [
+                // this.promptForSearchCriteria.bind(this),
                 this.displayRestaurants.bind(this),
             ])
         );
@@ -38,55 +40,26 @@ export class RestaurantDialog extends ComponentDialog {
     private async displayRestaurants(
         step: WaterfallStepContext
     ): Promise<DialogTurnResult> {
-        const searchCriteria = step.result;
+        // const searchCriteria = step.result;
 
         try {
-            const response = await axios.get(
-                `${apiConfig.URL}/restaurants/search?criteria=${encodeURIComponent(
-                    searchCriteria
-                )}`
-            );
+            const response = await axios.get(`${apiConfig.URL}/restaurants/`);
             const restaurants = response.data;
 
             if (restaurants.length > 0) {
-                const cards = restaurants.map((restaurant: any) => ({
-                    type: "Container",
-                    items: [
-                        {
-                            type: "TextBlock",
-                            text: restaurant.name,
-                            weight: "Bolder",
-                            size: "Medium",
-                        },
-                        { type: "TextBlock", text: restaurant.cuisine },
-                        { type: "TextBlock", text: restaurant.location },
-                        {
-                            type: "TextBlock",
-                            text: `$${restaurant.price_range}`,
-                            weight: "Bolder",
-                            spacing: "Small",
-                        },
-                        { type: "TextBlock", text: restaurant.description },
-                    ],
-                }));
+                const attachments = await restaurants.map((restaurant: any) => {
+                    const card = createRestaurantCard(restaurant);
+                    const attachment = {
+                        contentType: "application/vnd.microsoft.card.adaptive",
+                        content: card,
+                    };
+                    return attachment;
+                });
 
-                const card = {
-                    type: "AdaptiveCard",
-                    body: cards,
-                    actions: [],
-                    $schema:
-                        "http://adaptivecards.io/schemas/adaptive-card.json",
-                    version: "1.2",
-                };
+                await step.context.sendActivity(MessageFactory.text("Here we got some matching restaurants.."));
 
                 await step.context.sendActivity({
-                    attachments: [
-                        {
-                            contentType:
-                                "application/vnd.microsoft.card.adaptive",
-                            content: card,
-                        },
-                    ],
+                    attachments,
                 });
             } else {
                 await step.context.sendActivity(

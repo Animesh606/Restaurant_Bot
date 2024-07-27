@@ -16,9 +16,9 @@ export class ReservationDialog extends ComponentDialog {
     constructor() {
         super(RESERVATION_DIALOG);
 
-        this.addDialog(new TextPrompt(TEXT_PROMPT))
-            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
-                this.promptForRestaurantId.bind(this),
+        this.addDialog(new TextPrompt(TEXT_PROMPT)).addDialog(
+            new WaterfallDialog(WATERFALL_DIALOG, [
+                // this.promptForRestaurantId.bind(this),
                 this.promptForReservationDate.bind(this),
                 this.promptForSpecialRequests.bind(this),
                 this.makeReservation.bind(this),
@@ -40,7 +40,7 @@ export class ReservationDialog extends ComponentDialog {
     private async promptForReservationDate(
         step: WaterfallStepContext | any
     ): Promise<DialogTurnResult> {
-        step.values.restaurantId = step.result;
+        step.values.restaurantId = step.options.restaurantId;
         return await step.prompt(
             TEXT_PROMPT,
             "Please provide the date and time for your reservation (e.g., 2024-07-13 19:00)."
@@ -64,15 +64,12 @@ export class ReservationDialog extends ComponentDialog {
         const specialRequests = step.result;
 
         try {
-            const response = await axios.post(
-                `${apiConfig.URL}/reservations`,
-                {
-                    user_id: 1,
-                    restaurant_id: restaurantId,
-                    reservation_date: reservationDate,
-                    special_requests: specialRequests,
-                }
-            );
+            const response = await axios.post(`${apiConfig.URL}/reservations`, {
+                user_id: 1,
+                restaurant_id: restaurantId,
+                reservation_date: reservationDate,
+                special_requests: specialRequests,
+            });
 
             const reservation = response.data;
             const card = {
@@ -81,27 +78,26 @@ export class ReservationDialog extends ComponentDialog {
                     {
                         type: "TextBlock",
                         text: "Reservation Confirmed",
-                        weight: "Bolder",
-                        size: "Medium",
+                        weight: "bolder",
+                        size: "medium",
+                        color: "good",
                     },
                     {
                         type: "TextBlock",
-                        text: `Restaurant ID: ${reservation.restaurant_id}`,
+                        text: `Restaurant ID: ${reservation.id}`,
                     },
                     {
                         type: "TextBlock",
-                        text: `Date and Time: ${reservation.reservation_date}`,
+                        text: `Date and Time: ${reservationDate}`,
                     },
                     {
                         type: "TextBlock",
-                        text: `Special Requests: ${
-                            reservation.special_requests || "None"
-                        }`,
+                        text: `Special Requests: ${specialRequests || "None"}`,
                     },
                 ],
                 actions: [],
                 $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-                version: "1.2",
+                version: 1.3,
             };
 
             await step.context.sendActivity({

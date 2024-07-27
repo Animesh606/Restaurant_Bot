@@ -42,8 +42,8 @@ export class RootDialog extends ComponentDialog {
             return await step.beginDialog("reservationDialog");
         } else if (action.includes("order")) {
             return await step.beginDialog("orderDialog");
-        } else if (action.includes("menu")) {
-            return await step.beginDialog("menuDialog");
+        // } else if (action.includes("menu")) {
+        //     return await step.beginDialog("menuDialog");
         } else if (action.includes("restaurant")) {
             return await step.beginDialog("restaurantDialog");
         } else {
